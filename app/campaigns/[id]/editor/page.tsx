@@ -30,6 +30,7 @@ export default function EditorPage({ params, searchParams }: EditorPageProps) {
   const [canRedo, setCanRedo] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [canvasInstance, setCanvasInstance] = useState<any>(null);
   const canvasRef = useRef<any>(null);
   // Store latest canvas state for saving (not used for rendering)
   const latestCanvasStateRef = useRef<any>(null);
@@ -215,6 +216,7 @@ export default function EditorPage({ params, searchParams }: EditorPageProps) {
 
   const handleCanvasReady = useCallback((c: any) => {
     canvasRef.current = c;
+    setCanvasInstance(c);
   }, []);
 
   if (isLoading || !asset || !initialCanvasState) {
@@ -257,7 +259,7 @@ export default function EditorPage({ params, searchParams }: EditorPageProps) {
       />
 
       {/* Text Controls */}
-      <TextControls canvas={canvasRef.current} />
+      <TextControls canvas={canvasInstance} />
 
       {/* Main Editor Area */}
       <div className="flex-1 flex overflow-hidden">
@@ -274,10 +276,10 @@ export default function EditorPage({ params, searchParams }: EditorPageProps) {
         </div>
 
         {/* Layers Panel */}
-        <LayersPanel canvas={canvasRef.current} />
+        <LayersPanel canvas={canvasInstance} />
 
         {/* Properties Panel */}
-        <PropertiesPanel canvas={canvasRef.current} />
+        <PropertiesPanel canvas={canvasInstance} />
       </div>
     </div>
   );

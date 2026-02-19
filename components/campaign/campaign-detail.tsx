@@ -60,6 +60,13 @@ export function CampaignDetail({ campaign }: CampaignDetailProps) {
 
   const { job } = useGenerationPoll(jobId);
 
+  // Refresh page data when generation completes to show new assets
+  useEffect(() => {
+    if (job?.status === 'COMPLETED') {
+      router.refresh();
+    }
+  }, [job?.status, router]);
+
   const handleLocalize = async (assetId: string, targetLanguage: string) => {
     setTranslatingAsset(assetId);
     try {
