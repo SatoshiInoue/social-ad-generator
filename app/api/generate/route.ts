@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import sharp from 'sharp';
 import {
   generateBackground,
@@ -341,7 +342,7 @@ async function processGeneration(
           language: campaign.brief.language || 'en',
           s3Key,
           s3Url,
-          canvasState,
+          canvasState: canvasState as Prisma.InputJsonValue,
         },
       });
 
