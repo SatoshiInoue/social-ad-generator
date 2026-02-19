@@ -137,6 +137,8 @@ export interface CanvasLayer {
   charSpacing?: number;
   splitByGrapheme?: boolean;
   locked?: boolean;
+  lockScalingX?: boolean;
+  lockScalingY?: boolean;
   selectable?: boolean;
   evented?: boolean;
   name?: string;

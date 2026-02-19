@@ -16,7 +16,7 @@ export function useCanvasHistory(canvas: Canvas | null) {
   const saveState = useCallback(() => {
     if (!canvas || isLoadingRef.current) return;
 
-    const json = JSON.stringify(canvas.toJSON(['id', 'name', 'layerType', 'locked']));
+    const json = JSON.stringify((canvas as any).toJSON(['id', 'name', 'layerType', 'locked']));
 
     // Remove any redo states
     historyRef.current = historyRef.current.slice(0, currentIndexRef.current + 1);

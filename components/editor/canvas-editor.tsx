@@ -220,7 +220,7 @@ export function CanvasEditor({
       if (isLoadingRef.current) return;
       saveState();
       // Get canvas state and restore original S3 URLs (remove proxy prefix)
-      const state = canvas.toJSON(['id', 'name', 'layerType', 'locked']);
+      const state = (canvas as any).toJSON(['id', 'name', 'layerType', 'locked']);
       if (state.objects) {
         for (const obj of state.objects) {
           if (obj.type === 'image' && obj.src) {
