@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  brands        Brand[]
+  campaigns     Campaign[]
+  mediaAssets   MediaAsset[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// Domain models
+model Brand {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  logoUrl         String?
+  colorPalette    Json?    // Array of hex colors
+  guidelines      String?  // Free-text brand guidelines
+  tone            String?  // e.g., "professional", "playful"
+  style           String?  // e.g., "minimalist", "vibrant"
+  prohibitedTerms String[] // Array of prohibited terms
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+}
+
+model Campaign {
+  id               String         @id @default(cuid())
+  userId           String
+  brandId          String
+  name             String
+  status           CampaignStatus @default(DRAFT)
+  productImageIds  String[]       @default([]) // Array of MediaAsset IDs for product images
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brief           Brief?
+  generatedAssets GeneratedAsset[]
+  generationJobs  GenerationJob[]
+}
+
+model Brief {
+  id           String   @id @default(cuid())
+  campaignId   String   @unique
+  campaignName String
+  brandName    String
+  cta          String?  // Call to action
+  productName  String?
+  targetRegion String?
+  language     String?
+  audience     String?  // Target audience description
+  message      String?  // Core message
+  rawFileUrl   String?  // URL to uploaded PDF/DOCX/JSON/YAML
+  parsedData   Json?    // Structured data extracted from file
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model MediaAsset {
+  id           String   @id @default(cuid())
+  userId       String
+  fileName     String
+  fileType     String   // e.g., "image/png"
+  s3Key        String   @unique
+  s3Url        String
+  thumbnailUrl String?
+  dimensions   Json?    // { width: number, height: number }
+  tags         String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GeneratedAsset {
+  id              String   @id @default(cuid())
+  campaignId      String
+  generationJobId String
+  aspectRatio     String   // e.g., "1:1", "9:16", "16:9"
+  language        String   @default("en")
+  s3Key           String   @unique
+  s3Url           String
+  canvasState     Json?    // Fabric.js canvas state
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  campaign        Campaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  generationJob   GenerationJob     @relation(fields: [generationJobId], references: [id], onDelete: Cascade)
+  complianceScore ComplianceScore?
+}
+
+model GenerationJob {
+  id         String          @id @default(cuid())
+  campaignId String
+  status     GenerationStatus @default(PENDING)
+  progress   Int             @default(0) // 0-100
+  config     Json?           // Generation configuration (aspect ratios, style options)
+  error      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  generatedAssets GeneratedAsset[]
+}
+
+model ComplianceScore {
+  id                  String   @id @default(cuid())
+  generatedAssetId    String   @unique
+  score               Int      // 0-100
+  reasoning           Json     // Detailed reasoning per check
+  prohibitedTerms     Int      // Score for prohibited terms check (0-25)
+  colorCompliance     Int      // Score for color palette check (0-25)
+  guidelinesCompliance Int     // Score for brand guidelines check (0-30)
+  logoPresence        Int      // Score for logo presence check (0-10)
+  textReadability     Int      // Score for text readability check (0-10)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  generatedAsset GeneratedAsset @relation(fields: [generatedAssetId], references: [id], onDelete: Cascade)
+}
+
+// Enums
+enum CampaignStatus {
+  DRAFT
+  GENERATING
+  GENERATED
+  EDITING
+  EXPORTED
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}

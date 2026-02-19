@@ -1,0 +1,27 @@
+node_modules
+.next
+.git
+.gitignore
+
+# Environment files — never bake secrets into the image
+.env
+.env.*
+!.env.example
+
+# Dev/docs artifacts
+*.md
+plans/
+scripts/
+.claude/
+fonts/
+
+# Build artifacts
+npm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma migrations are applied separately, not at build time
+prisma/migrations/
+
+# macOS
+.DS_Store
