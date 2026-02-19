@@ -40,7 +40,8 @@ RUN npm ci
 COPY . .
 
 # Generate Prisma client before building
-RUN npx prisma generate
+# DATABASE_URL is required by prisma.config.ts at load time but not used during generate
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost/dummy" npx prisma generate
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
