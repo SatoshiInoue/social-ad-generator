@@ -67,6 +67,8 @@ ENV HOSTNAME=0.0.0.0
 
 # Production node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+# Prisma generated client (created during build, not in deps)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Build output and app config from builder stage
 COPY --from=builder /app/.next ./.next
