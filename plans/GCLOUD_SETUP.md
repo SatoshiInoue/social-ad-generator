@@ -30,7 +30,7 @@ GitHub (push to main)
 Set your project ID for all commands below:
 ```bash
 export PROJECT_ID="your-project-id"
-export REGION="us-central1"
+export REGION="asia-northeast1"
 gcloud config set project $PROJECT_ID
 ```
 
