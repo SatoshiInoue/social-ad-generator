@@ -146,6 +146,7 @@ export interface CanvasLayer {
 export interface FabricCanvasState {
   version: string;
   objects: CanvasLayer[];
+  [key: string]: unknown;
 }
 
 export interface CanvasStateOptions {
