@@ -22,6 +22,13 @@ try {
   console.error('Failed to register Chinese font:', error);
 }
 
+try {
+  const krFontPath = path.join(process.cwd(), 'fonts', 'NotoSansKR-Bold.otf');
+  GlobalFonts.registerFromPath(krFontPath, 'Noto Sans KR');
+} catch (error) {
+  console.error('Failed to register Korean font:', error);
+}
+
 /**
  * Render a Fabric.js canvas state to a PNG image buffer
  */
@@ -95,11 +102,12 @@ export async function renderCanvasState(
       const textAlign = layer.textAlign || 'left';
       const lineHeight = layer.lineHeight || 1.16;
 
-      // Detect if text contains CJK characters and ensure a CJK font is used
+      // Detect if text contains CJK/Korean characters and ensure an appropriate font is used
+      const hasKorean = /[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/.test(layer.text);
       const hasCJK = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(layer.text);
-      if (hasCJK && !fontFamily.includes('Noto Sans')) {
-        // Default to Noto Sans JP for CJK if no Noto Sans font specified
-        fontFamily = 'Noto Sans JP, ' + fontFamily;
+      if ((hasCJK || hasKorean) && !fontFamily.includes('Noto Sans')) {
+        const cjkFont = hasKorean ? 'Noto Sans KR' : 'Noto Sans JP';
+        fontFamily = cjkFont + ', ' + fontFamily;
       }
 
       ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
