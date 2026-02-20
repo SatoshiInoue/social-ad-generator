@@ -73,6 +73,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Build output and app config from builder stage
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/fonts ./fonts
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
