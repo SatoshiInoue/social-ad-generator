@@ -13,7 +13,6 @@ node_modules
 plans/
 scripts/
 .claude/
-fonts/
 
 # Build artifacts
 npm-debug.log*
