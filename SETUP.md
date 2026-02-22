@@ -442,6 +442,14 @@ After setting up all credentials:
    - Try uploading an image
    - Check your S3 bucket
 
+5. **Verify CJK Font Support**
+   - The `fonts/` directory contains fonts for server-side rendering of non-Latin text:
+     - `NotoSansJP-Bold.ttf` — Japanese
+     - `NotoSansSC-Bold.ttf` — Chinese (Simplified)
+     - `NotoSansKR-Bold.otf` — Korean
+   - These are used by `@napi-rs/canvas` when generating ad thumbnails
+   - If fonts are missing, CJK text in thumbnails will render as boxes (☒)
+
 ---
 
 ## 💰 Free Tier Limits
@@ -474,6 +482,11 @@ After setting up all credentials:
 - Check CORS configuration
 - Verify IAM user has S3 permissions
 - Check bucket name in .env matches actual bucket
+
+### Generated Thumbnails Show Boxes Instead of CJK Text
+- Verify the `fonts/` directory exists in the project root with `.ttf`/`.otf` files
+- Restart the dev server after adding fonts
+- For Docker deployments, ensure `fonts/` is not in `.dockerignore`
 
 ### Generated Images Show 403 Error
 - Verify bucket policy allows public read (`s3:GetObject`)

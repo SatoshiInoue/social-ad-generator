@@ -82,25 +82,26 @@ gcloud sql users create appuser \
 Install the Cloud SQL Auth Proxy to connect locally:
 
 ```bash
-# macOS (Apple Silicon)
-curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.2/cloud-sql-proxy.darwin.arm64
-chmod +x cloud-sql-proxy
-
-# macOS (Intel)
-curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.2/cloud-sql-proxy.darwin.amd64
-chmod +x cloud-sql-proxy
+# macOS (recommended)
+brew install cloud-sql-proxy
 ```
 
 Authenticate and start the proxy:
 ```bash
 gcloud auth application-default login
 
-./cloud-sql-proxy $PROJECT_ID:$REGION:social-ad-gen-db --port=5433 &
+cloud-sql-proxy $PROJECT_ID:$REGION:social-ad-gen-db --port=5433 &
 ```
 
 Apply the schema (the proxy runs on port 5433 to avoid conflicts with local postgres):
+
+> ⚠️ **URL-encode your password** if it contains special characters (`/`, `+`, `=`, `@`, etc.):
+> ```bash
+> python3 -c "import urllib.parse; print(urllib.parse.quote('YOUR_PASSWORD', safe=''))"
+> ```
+
 ```bash
-DATABASE_URL="postgresql://appuser:CHOOSE_A_STRONG_PASSWORD@localhost:5433/social_ad_generator" \
+DATABASE_URL="postgresql://appuser:URL_ENCODED_PASSWORD@localhost:5433/social_ad_generator" \
   npx prisma db push
 ```
 
@@ -145,7 +146,9 @@ Store each environment variable as a secret. Replace the values with your actual
 ```bash
 # Database — use the Cloud SQL socket path for Cloud Run
 # Format: postgresql://USER:PASSWORD@localhost/DB?host=/cloudsql/CONNECTION_NAME
-echo -n "postgresql://appuser:CHOOSE_A_STRONG_PASSWORD@localhost/social_ad_generator?host=/cloudsql/$PROJECT_ID:$REGION:social-ad-gen-db" \
+# ⚠️ URL-encode the password if it contains special characters (/ + = @ etc.)
+#   python3 -c "import urllib.parse; print(urllib.parse.quote('YOUR_PASSWORD', safe=''))"
+echo -n "postgresql://appuser:URL_ENCODED_PASSWORD@localhost/social_ad_generator?host=/cloudsql/$PROJECT_ID:$REGION:social-ad-gen-db" \
   | gcloud secrets create database-url --data-file=-
 
 echo -n "$(openssl rand -base64 32)" \
@@ -303,6 +306,17 @@ gcloud run services describe social-ad-generator \
   --format='value(status.url)'
 ```
 
+### Enable public access
+
+The `--allow-unauthenticated` flag in `deploy.yml` may not apply the IAM binding due to organization policies. If you get a 403 Forbidden error, manually grant public access:
+
+```bash
+gcloud run services add-iam-policy-binding social-ad-generator \
+  --region=$REGION \
+  --member="allUsers" \
+  --role="roles/run.invoker"
+```
+
 ### Update NEXTAUTH_URL secret
 
 Once you have the Cloud Run URL, update the secret:
@@ -378,6 +392,18 @@ gcloud run services update social-ad-generator \
   --min-instances=1
 ```
 
+### CJK Font Support
+
+The `fonts/` directory contains fonts for server-side thumbnail rendering of non-Latin text:
+- `NotoSansJP-Bold.ttf` — Japanese
+- `NotoSansSC-Bold.ttf` — Chinese (Simplified)
+- `NotoSansKR-Bold.otf` — Korean
+
+These must be included in the Docker image. Ensure `fonts/` is **not** listed in `.dockerignore` and the Dockerfile copies them:
+```dockerfile
+COPY --from=builder /app/fonts ./fonts
+```
+
 ### Updating Secrets
 
 To rotate or update any secret value:
@@ -417,3 +443,38 @@ gcloud run domain-mappings create \
 - Verify `--add-cloudsql-instances` in `deploy.yml` uses the correct instance connection name
 - Verify `DATABASE_URL` secret uses Unix socket format: `?host=/cloudsql/PROJECT:REGION:INSTANCE`
 - Verify `cloud-run-sa` has `roles/cloudsql.client`
+
+### 403 Forbidden after deploy
+- The `--allow-unauthenticated` flag may not work due to org policies
+- Manually grant access: `gcloud run services add-iam-policy-binding social-ad-generator --region=$REGION --member="allUsers" --role="roles/run.invoker"`
+
+### 500 error after OAuth login
+- Check the `DATABASE_URL` secret value — if the password contains `/`, `+`, or `=`, it must be URL-encoded
+- Update the secret: `echo -n "corrected-url" | gcloud secrets versions add database-url --data-file=-`
+
+### "UntrustedHost" error in logs
+- NextAuth requires `trustHost: true` in its config when running behind Cloud Run's reverse proxy
+- Verify `lib/auth.ts` has `trustHost: true` in the NextAuth options
+
+### Docker build fails: "DATABASE_URL required" during prisma generate
+- `prisma.config.ts` requires `DATABASE_URL` at load time even though `prisma generate` doesn't connect to the database
+- The Dockerfile passes a dummy value: `RUN DATABASE_URL="postgresql://dummy:dummy@localhost/dummy" npx prisma generate`
+
+### "@prisma/client did not initialize yet" at runtime
+- The Prisma generated client is created in the builder stage but the runner copies `node_modules` from the deps stage
+- Ensure the Dockerfile copies the generated client: `COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma`
+
+### Prisma "Query Engine not found for runtime debian-openssl-X.X.x"
+- The Prisma client was generated for one OpenSSL version but Cloud Run uses a different one
+- Add both targets in `schema.prisma`:
+  ```prisma
+  generator client {
+    provider      = "prisma-client-js"
+    binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+  }
+  ```
+
+### CJK text shows as boxes (☒) in generated thumbnails
+- The `fonts/` directory is missing from the Docker image
+- Ensure `fonts/` is **not** in `.dockerignore`
+- Ensure the Dockerfile has: `COPY --from=builder /app/fonts ./fonts`
