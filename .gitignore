@@ -38,3 +38,12 @@ next-env.d.ts
 prisma/migrations
 
 /generated/prisma
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.auto.tfvars
+terraform/gcp/terraform.tfvars.local
+terraform/aws/terraform.tfvars.local
